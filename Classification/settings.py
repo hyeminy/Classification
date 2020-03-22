@@ -1,0 +1,26 @@
+gpu_id = '0'
+num_workers = 4
+train_dset_path = 'C:\\Users\\9live\\hm_code\\open_data\\office31\\amazon\\images'
+val_dset_path =  'C:\\Users\\9live\\hm_code\\open_data\\office31\\dslr\\images'
+RandomResizedCrop_train = True
+RandomResizedCrop_val = True
+RandomResizedCrop_size_train = 256
+RandomResizedCrop_train = False
+RandomResizedCrop_size_val = 256
+CenterCrop_train = True
+CenterCrop_val = True
+CenterCrop_size_train = 300
+CenterCrop_size_val = 300
+Normalize = True
+Resize_train = False
+Resize_size_train = 256
+Resize_val = True
+Resize_size_val = 256
+train_batchsize = 4
+val_batchsize = 4
+imshow = True
+matplot_imshow = False
+cv_imshow = False
+Normalize_mean = [0.485, 0.456, 0.406]
+Normalize_std = [0.229, 0.224, 0.225]
+

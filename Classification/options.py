@@ -1,76 +1,253 @@
 import argparse
+import os
+import settings
 
-parser = argparse.ArgumentParser(description='Options for UDA')
+parser = argparse.ArgumentParser(description='Classification')
 
+##################################################
+# Env
+##################################################
+parser.add_argument('--gpu_id', type=str, default='0')
+parser.add_argument('--num_workers', type=int, default=4)
 
-#########################
-# 환경 Setting
-#########################
-parser.add_argument('--num_gpu', type=int, default=1, help='number of GPUs')
-parser.add_argument('--device_idx', type=str, default='0', help='Gpu idx')
+##################################################
+# Data
+##################################################
+parser.add_argument('--train_dset_path', type=str, default='C:\\Users\\9live\\hm_code\\open_code')
+parser.add_argument('--val_dset_path', type=str, default='C:\\Users\\9live\\hm_code\\open_code')
+#parser.add_argument('--test_dset_path', type=str, default='C:\\Users\\9live\\hm_code\\open_code')
 
-
-#########################
-# Experiment Logging Settings
-#########################
-parser.add_argument('--experiment_dir', type=str, default='', help='Experiment save directory')
-parser.add_argument('--experiment_description', type=str, default='svhn_mnist', help='Experiment description')
-parser.add_argument('--checkpoint_period', type=int, default=1, help='epoch / checkpoint_period = checkpoint num')
-
-#########################
-# Data load Settings
-#########################
-parser.add_argument('--source_dataset_dir', type=str, default='/DATA/DA/open_data/office31/amazon/images')
-parser.add_argument('--target_dataset_dir', type=str, default='/DATA/DA/open_data/office31/webcam/images')
-
-#########################
-# Data 전처리 Settings
-#########################
-parser.add_argument('--transform_type', type=str, default='visda_standard', help='Transform type')
-parser.add_argument('--num_classes', type=int, default=12)
-
-#########################
-# Training과정 Settings
-#########################
-parser.add_argument('--train_mode', type=str, default='dta', choices=['dta', 'source_only'],
-                    help='Train mode')
-parser.add_argument('--lr', type=float, default=0.001, help='learning rate (default: 0.001)')
-parser.add_argument('--epoch', type=int, default=80, help='epoch (default: 100)')
-parser.add_argument('--weight_decay', type=float, default=0, help='l2 regularization lambda (default: 0)')
-parser.add_argument('--decay_step', type=int, default=15, help='num epochs for decaying learning rate')
-parser.add_argument('--momentum', type=float, default=0.9, help='SGD momentum')
-parser.add_argument('--gamma', type=float, default=0.1, help='learning rate decay gamma')
-parser.add_argument('--source_batch_size', type=int, default=64, help='Batch Size')
-parser.add_argument('--target_batch_size', type=int, default=64, help='Batch Size')
-parser.add_argument('--val_batch_size', type=int, default=64, help='Batch Size')
-parser.add_argument('--optimizer', type=str, default='SGD', choices=['SGD', 'Adam'], help='Optimizer')
-
-#########################
-# Test과정 Settings
-#########################
-parser.add_argument('--log_period_as_iter', type=int, default=10000, help='num iter')
-parser.add_argument('--validation_period_as_iter', type=int, default=30000, help='validation period in iterations')
-parser.add_argument('--test', type=bool, default=False, help='is Test')
+parser.add_argument('--train_batchsize', type=int, default=32)
+parser.add_argument('--val_batchsize', type=int, default=32)
+#parser.add_argument('--test_batchsize', type=int, default=4)
 
 
-#########################
-# 모델 Settings
-#########################
-parser.add_argument('--classifier_ckpt_path', type=str, default='', help='Domain Classifier Checkpoint Path')
-parser.add_argument('--encoder_ckpt_path', type=str, default='', help='Encoder Checkpoint Path')
-parser.add_argument('--pretrain', type=str, default='',
-                    choices=['class_classifier', 'domain_classifier', ''], help='Pretrain mode')
-#parser.add_argument('--model', type=str, default='resnet50', help='Model: resnet50 | resnet101')
-parser.add_argument('--feature_extractor_model', type=str, default='resnet50', help='Model: resnet50 | resnet50_dta' )
-parser.add_argument('--feature_extractor_pretrain', type=bool, default=True)
-#########################
-# Loss Settings
-#########################
-parser.add_argument('--source_consistency_loss', type=str, default='l2', choices=['l1', 'l2', 'kld'],
-                    help='Source Consistency Loss')
+parser.add_argument('--imshow', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+parser.add_argument('--cv_imshow', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes'])) #parser.add_argument('--cv_imshow', type=bool, default=False) --> false 인식 못함
+parser.add_argument('--matplot_imshow', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+
+##################################################
+# Data Info
+##################################################
+#parser.add_argument('--class_num', type=int, default=10)
+
+##################################################
+# Data Pre-process from torch (torch에 있는 표현)
+##################################################
+
+#### Normalize
+#parser.add_argument('--Normalize', type=bool, default=True)
+parser.add_argument('--Normalize', default=True, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+
+parser.add_argument('--Normalize_mean', type=float, default=[0.485, 0.456, 0.406] , help='ImageNet mean')
+parser.add_argument('--Normalize_std', type=float, default=[0.229, 0.224, 0.225] , help='ImageNet std')
+
+
+#### RandomResizedCrop
+parser.add_argument('--RandomResizedCrop_train', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+parser.add_argument('--RandomResizedCrop_size_train',type=int, default=256)
+
+parser.add_argument('--RandomResizedCrop_val', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+parser.add_argument('--RandomResizedCrop_size_val',type=int, default=256)
+
+#### Centercrop
+
+parser.add_argument('--CenterCrop_train', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+parser.add_argument('--CenterCrop_size_train',type=int, default=224)
+
+parser.add_argument('--CenterCrop_val', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+parser.add_argument('--CenterCrop_size_val',type=int, default=224)
+
+#### Resize
+parser.add_argument('--Resize_train', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+parser.add_argument('--Resize_size_train',type=int, default=224)
+
+parser.add_argument('--Resize_val', default=False, type=lambda x: (str(x).lower() in ['true','1', 'yes']))
+parser.add_argument('--Resize_size_val',type=int, default=256)
 
 
 
-def get_parsed_args(arg_parser: argparse.ArgumentParser):
-    args = arg_parser.parse_args()
-    return args
+'''
+##################################################
+# Network
+##################################################
+parser.add_argument('--net', type=str, default='resnet50', choices=['resnet50'])
+
+##################################################
+# Output
+##################################################
+parser.add_argument('--test_interval', type=int, default=500)
+parser.add_argument('--output_dir', type=str, default='output')
+
+##################################################
+# Train
+##################################################
+parser.add_argument('--lr', type=float, default=0.001)
+
+parser.add_argument('--num_iterations', type=int, default=10000)
+
+parser.add_argument('--optimizer', type=str, default='SGD', choices=['SGD'])
+
+
+
+"""LR 스케쥴러, optimizer에 대해서 더 업데이트 하기"""
+'''
+########################################################################################
+'''
+args = parser.parse_args()
+
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
+
+config={}
+config['gpu_id'] = args.gpu_id
+config['num_workers'] = args.num_workers
+
+#config['data']={}
+config['train_dset_path']=args.train_dset_path
+config['val_dset_path']=args.val_dset_path
+# config['test_dset_path']=args.test_dset_path
+#
+config['train_batchsize']=args.train_batchsize
+config['val_batchsize']=args.val_batchsize
+# config['test_batchsize']=args.test_batchsize
+#
+# config['class_num']=args.class_num
+
+config['imshow']=args.imshow
+config['cv_imshow']=args.cv_imshow
+config['matplot_imshow']=args.matplot_imshow
+####################################
+# Pre-process
+####################################
+
+config['Normalize'] = args.Normalize
+config['Normalize_mean'] = args.Normalize_mean
+config['Normalize_std'] = args.Normalize_std
+
+config['RandomResizedCrop_train']=args.RandomResizedCrop_train
+config['RandomResizedCrop_size_train']=args.RandomResizedCrop_size_train
+
+config['RandomResizedCrop_val']=args.RandomResizedCrop_train
+config['RandomResizedCrop_size_val']=args.RandomResizedCrop_size_train
+
+config['CenterCrop_train'] = args.CenterCrop_train
+config['CenterCrop_size_train'] = args.CenterCrop_size_train
+
+config['CenterCrop_val'] = args.CenterCrop_val
+config['CenterCrop_size_val'] = args.CenterCrop_size_val
+
+config['Resize_train']=args.Resize_train
+config['Resize_size_train']=args.Resize_size_train
+
+config['Resize_val']=args.Resize_val
+config['Resize_size_val']=args.Resize_size_val
+
+# config['Colorjitter'] = args.Colorjitter
+# config['Colorjitter_brightness'] = args.brightness
+# config['Colorjitter_contrast'] = args.contrast
+# config['Colorjitter_saturation'] = args.saturation
+# config['Colorjitter_hue'] = args.hue
+
+
+
+
+# config['num_iterations'] = args.num_iterations
+# config['test_interval'] = args.test_interval
+# config['output_path'] = args.output_dir
+# if not os.path.exists(config["output_path"]):
+#     os.mkdir(config["output_path"])
+# 
+# config['out_file'] = open(os.path.join(config['output_path'], 'log.txt'), 'w')
+# if not os.path.exists(config["output_path"]):
+#     os.mkdir(config["output_path"])
+# 
+# config['optimizer'] = {}
+# config['optimizer']['type']=args.optimizer
+# #config['optimizer']['optim_params']=
+# 
+# 
+# config['lr']=args.lr
+# 
+# config['network']=args.net
+
+#config['out_file'].write(str(config))
+#config['out_file'].flush()
+'''
+#########################################################################################################
+
+os.environ["CUDA_VISIBLE_DEVICES"] = settings.gpu_id
+
+config={}
+config['gpu_id'] = settings.gpu_id
+config['num_workers'] = settings.num_workers
+
+#config['data']={}
+config['train_dset_path']=settings.train_dset_path
+config['val_dset_path']=settings.val_dset_path
+# config['test_dset_path']=asettings.test_dset_path
+#
+config['train_batchsize']=settings.train_batchsize
+config['val_batchsize']=settings.val_batchsize
+# config['test_batchsize']=settings.test_batchsize
+#
+# config['class_num']=settings.class_num
+
+config['imshow']=settings.imshow
+config['cv_imshow']=settings.cv_imshow
+config['matplot_imshow']=settings.matplot_imshow
+####################################
+# Pre-process
+####################################
+
+config['Normalize'] = settings.Normalize
+config['Normalize_mean'] = settings.Normalize_mean
+config['Normalize_std'] = settings.Normalize_std
+
+config['RandomResizedCrop_train']=settings.RandomResizedCrop_train
+config['RandomResizedCrop_size_train']=settings.RandomResizedCrop_size_train
+
+config['RandomResizedCrop_val']=settings.RandomResizedCrop_train
+config['RandomResizedCrop_size_val']=settings.RandomResizedCrop_size_train
+
+config['CenterCrop_train'] = settings.CenterCrop_train
+config['CenterCrop_size_train'] = settings.CenterCrop_size_train
+
+config['CenterCrop_val'] = settings.CenterCrop_val
+config['CenterCrop_size_val'] = settings.CenterCrop_size_val
+
+config['Resize_train']=settings.Resize_train
+config['Resize_size_train']=settings.Resize_size_train
+
+config['Resize_val']=settings.Resize_val
+config['Resize_size_val']=settings.Resize_size_val
+
+# config['Colorjitter'] = settings.Colorjitter
+# config['Colorjitter_brightness'] = settings.brightness
+# config['Colorjitter_contrast'] = settings.contrast
+# config['Colorjitter_saturation'] = settings.saturation
+# config['Colorjitter_hue'] = settings.hue
+
+
+
+'''
+config['num_iterations'] = settings.num_iterations
+config['test_interval'] = settings.test_interval
+config['output_path'] = settings.output_dir
+if not os.path.exists(config["output_path"]):
+    os.mkdir(config["output_path"])
+
+config['out_file'] = open(os.path.join(config['output_path'], 'log.txt'), 'w')
+if not os.path.exists(config["output_path"]):
+    os.mkdir(config["output_path"])
+
+config['optimizer'] = {}
+config['optimizer']['type']=settings.optimizer
+#config['optimizer']['optim_params']=
+
+
+config['lr']=settings.lr
+
+config['network']=settings.net
+'''
+#config['out_file'].write(str(config))
+#config['out_file'].flush()
