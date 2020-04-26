@@ -1,0 +1,26 @@
+{
+  "dataset_source" : "market1501",
+  "dataset_target" : "personx",
+  "batch_size" : 64,
+  "workers" : 4,
+  "height" : 256,
+  "width" : 128,
+  "num_instances" : 4,
+  "arch" : "resnet50",
+  "features" : 0,
+  "dropout" : 0,
+  "lr" : 0.00035,
+  "momentum" : 0.9,
+  "weight_decay" : 5e-4,
+  "warmup_step" : 10,
+  "milestones" : [40, 70],
+  "eval_steps" : 40,
+  "epochs" : 80,
+  "iters" : 100,
+  "seed" : 1,
+  "print_freq" : 10,
+  "margin" : 0.0,
+  "data_dir" : "",
+  "log_dir" : "logs/market1501_train/resnet50/"
+}
+
